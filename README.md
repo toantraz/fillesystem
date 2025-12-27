@@ -24,101 +24,171 @@ npm install @ignis/filesystem
 
 ## Quick Start
 
-### Basic Usage
+### 1. Install and Run the Upload Service Application
+
+The fastest way to see the Filesystem component in action is the **Upload Service Application** - a complete HTTP file upload API with validation, progress tracking, and configurable storage backends.
+
+```bash
+# Clone and navigate to the example
+git clone https://github.com/toantraz/filesystem.git
+cd filesystem/examples/upload-service-application
+
+# Install dependencies
+npm install
+
+# Build the application
+npm run build
+
+# Start the server (uploads go to ./uploads directory)
+npm start
+```
+
+The upload API will be available at `http://localhost:3000/api/upload`
+
+### 2. Configure Your Filesystem
+
+The application supports both **local** and **S3** storage through simple configuration.
+
+**For local storage** (default):
 
 ```typescript
-import { createFilesystem } from "@ignis/filesystem";
+// src/index.ts
+import path from "node:path";
+import { Application } from "./application.js";
+import type { FilesystemConfig } from "@ignis/filesystem";
 
-// Create a local filesystem instance
-const localFs = createFilesystem({
+const filesystemConfig: FilesystemConfig = {
   type: "local",
   local: {
-    basePath: "./storage",
+    basePath: path.join(process.cwd(), "uploads"),
     createMissingDirs: true,
   },
-});
+};
 
-// Create an S3 filesystem instance
-const s3Fs = createFilesystem({
+const app = new Application(filesystemConfig);
+app.init();
+await app.start();
+```
+
+**For S3 storage**:
+
+```typescript
+const filesystemConfig: FilesystemConfig = {
   type: "s3",
   s3: {
-    bucket: "my-bucket",
-    region: "us-east-1",
+    bucket: "my-uploads-bucket",
+    region: process.env.AWS_REGION || "us-east-1",
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    prefix: "my-app/",
+    prefix: "uploads/",
+    // For MinIO or S3-compatible services:
+    endpoint: process.env.S3_ENDPOINT,
+    forcePathStyle: true,
   },
-});
-
-// Use the same API for both backends
-await localFs.writeFile("/test.txt", "Hello, Local!");
-await s3Fs.writeFile("/test.txt", "Hello, S3!");
-
-const localContent = await localFs.readFile("/test.txt", "utf8");
-const s3Content = await s3Fs.readFile("/test.txt", "utf8");
+};
 ```
 
-### Using Environment Variables
+### 3. Use the Filesystem in Your Services
+
+The Filesystem is automatically injected into your services via dependency injection:
 
 ```typescript
-import { createFilesystem } from "@ignis/filesystem";
-import { ConfigValidator } from "@ignis/filesystem";
+// src/services/upload-service.service.ts
+import { inject } from "@venizia/ignis";
+import { FilesystemBindingKeys, type Filesystem } from "@ignis/filesystem";
 
-// Load configuration from environment variables
-const config = ConfigValidator.fromEnvironment();
-if (config) {
-  const fs = createFilesystem(config);
-  // Use the filesystem...
+export class UploadService {
+  constructor(
+    @inject({ key: FilesystemBindingKeys.FILESYSTEM_INSTANCE })
+    private filesystem: Filesystem,
+  ) {}
+
+  async uploadFile(file: File, targetPath: string) {
+    // Convert File to Buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Write using the Filesystem component
+    await this.filesystem.writeFile(targetPath, buffer);
+
+    return { success: true, storagePath: targetPath };
+  }
+
+  async readFile(filePath: string): Promise<string> {
+    return await this.filesystem.readFile(filePath, "utf8");
+  }
+
+  async deleteFile(filePath: string): Promise<void> {
+    await this.filesystem.unlink(filePath);
+  }
 }
 ```
 
-Environment variables:
-
-- `FILESYSTEM_TYPE`: `local` or `s3`
-- `FILESYSTEM_LOCAL_BASE_PATH`: Base path for local storage
-- `FILESYSTEM_S3_BUCKET`: S3 bucket name
-- `FILESYSTEM_S3_REGION`: AWS region
-- `AWS_ACCESS_KEY_ID`: AWS access key (also used for S3)
-- `AWS_SECRET_ACCESS_KEY`: AWS secret key (also used for S3)
-
-### Using with Ignis Framework
-
-For Ignis Framework users, see [Building Reusable Ignis Components](docs/ignis-component-guide.md) for detailed integration instructions including:
-
-- Component registration patterns
-- Dependency injection setup
-- Configuration management
-- Usage in applications
-
-**Quick example:**
+### 4. Register the Component in Your Application
 
 ```typescript
-import { FilesystemComponent, FilesystemBindingKeys } from '@ignis/filesystem';
+// src/application.ts
+import { FilesystemComponent, FilesystemBindingKeys } from "@ignis/filesystem";
 
 class MyApp extends BaseApplication {
-  preConfigure() {
-    // Bind configuration
+  override preConfigure(): ValueOrPromise<void> {
+    // Bind the filesystem configuration
     this.bind<FilesystemConfig>({
       key: FilesystemBindingKeys.FILESYSTEM_CONFIG,
-    }).toValue({
-      type: 'local',
-      local: { basePath: './storage' },
-    });
+    }).toValue(this.filesystemConfig);
 
-    // Create and bind filesystem
-    const filesystem = createFilesystem(config);
-    this.bind({ key: FilesystemBindingKeys.FILESYSTEM_INSTANCE })
-      .toValue(filesystem);
-  }
+    // Register the FilesystemComponent
+    this.component(FilesystemComponent as any);
 
-  async postConfigure() {
-    // Get and use filesystem
-    const fs = this.get<Filesystem>({
-      key: FilesystemBindingKeys.FILESYSTEM_INSTANCE,
-    });
-    await fs.writeFile('/test.txt', 'Hello!');
+    // Your filesystem is now ready for injection in services!
   }
 }
+```
+
+### 5. Available Operations
+
+Once configured, the Filesystem component provides a complete file operations API:
+
+```typescript
+// File operations
+await filesystem.writeFile("/path/to/file.txt", "Hello, World!");
+const content = await filesystem.readFile("/path/to/file.txt", "utf8");
+await filesystem.appendFile("/path/to/file.txt", " More text");
+await filesystem.copyFile("/src/file.txt", "/dest/file.txt");
+await filesystem.rename("/old/path.txt", "/new/path.txt");
+await filesystem.unlink("/path/to/file.txt"); // Delete
+
+// Directory operations
+await filesystem.mkdir("/new-folder", { recursive: true });
+const files = await filesystem.readdir("/path/to/dir");
+await filesystem.rmdir("/path/to/dir", { recursive: true });
+
+// File information
+const stats = await filesystem.stat("/path/to/file.txt");
+const exists = await filesystem.exists("/path/to/file.txt");
+const realPath = await filesystem.realpath("/path/to/file.txt");
+
+// Streams (for large files)
+const readStream = filesystem.createReadStream("/large-file.zip");
+const writeStream = filesystem.createWriteStream("/output.zip");
+readStream.pipe(writeStream);
+```
+
+### Environment Variables
+
+Configure the Filesystem via environment variables:
+
+```bash
+# .env file
+FILESYSTEM_TYPE=local                    # or "s3"
+FILESYSTEM_LOCAL_BASE_PATH=./uploads
+FILESYSTEM_LOCAL_CREATE_MISSING_DIRS=true
+
+# For S3:
+FILESYSTEM_S3_BUCKET=my-uploads
+FILESYSTEM_S3_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
 ```
 
 ## API Reference
