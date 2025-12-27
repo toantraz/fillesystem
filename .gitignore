@@ -110,3 +110,6 @@ test-results/
 
 # Upload service example uploads directory
 examples/upload-service-application/uploads/
+
+# Audit JSON files
+*-audit.json
