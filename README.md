@@ -18,6 +18,8 @@ A transparent filesystem abstraction library that provides a consistent interfac
 npm install @ignis/filesystem
 ```
 
+> **Note:** Want to build your own Ignis components? Check out the [Building Reusable Ignis Components Guide](docs/ignis-component-guide.md) for a comprehensive walkthrough using this filesystem component as a reference.
+
 ## Quick Start
 
 ### Basic Usage
@@ -76,6 +78,46 @@ Environment variables:
 - `FILESYSTEM_S3_REGION`: AWS region
 - `AWS_ACCESS_KEY_ID`: AWS access key (also used for S3)
 - `AWS_SECRET_ACCESS_KEY`: AWS secret key (also used for S3)
+
+### Using with Ignis Framework
+
+For Ignis Framework users, see [Building Reusable Ignis Components](docs/ignis-component-guide.md) for detailed integration instructions including:
+
+- Component registration patterns
+- Dependency injection setup
+- Configuration management
+- Usage in applications
+
+**Quick example:**
+
+```typescript
+import { FilesystemComponent, FilesystemBindingKeys } from '@ignis/filesystem';
+
+class MyApp extends BaseApplication {
+  preConfigure() {
+    // Bind configuration
+    this.bind<FilesystemConfig>({
+      key: FilesystemBindingKeys.FILESYSTEM_CONFIG,
+    }).toValue({
+      type: 'local',
+      local: { basePath: './storage' },
+    });
+
+    // Create and bind filesystem
+    const filesystem = createFilesystem(config);
+    this.bind({ key: FilesystemBindingKeys.FILESYSTEM_INSTANCE })
+      .toValue(filesystem);
+  }
+
+  async postConfigure() {
+    // Get and use filesystem
+    const fs = this.get<Filesystem>({
+      key: FilesystemBindingKeys.FILESYSTEM_INSTANCE,
+    });
+    await fs.writeFile('/test.txt', 'Hello!');
+  }
+}
+```
 
 ## API Reference
 
@@ -222,6 +264,14 @@ Build the library:
 npm run build
 ```
 
+## Documentation
+
+- **[Building Reusable Ignis Components](docs/ignis-component-guide.md)** - Comprehensive guide on implementing and using Ignis components
+- [Developer Guide](docs/developer-guide.md) - Code style patterns and conventions
+- [Migration Guide](docs/migration-guide.md) - Gradual convergence strategy
+- [Scripts Reference](docs/scripts-reference.md) - All validation and migration scripts
+- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+
 ## Code Style Standards
 
 This project follows Ignis coding standards. See the [quickstart guide](specs/001-code-style-standards/quickstart.md) for onboarding.
@@ -284,12 +334,6 @@ npm run migrate:track > violations-suppressed.txt
 # Fix and validate a single file
 npm run fix-file path/to/file.ts
 ```
-
-For more details, see:
-- [Developer Guide](docs/developer-guide.md) - Code style patterns and conventions
-- [Migration Guide](docs/migration-guide.md) - Gradual convergence strategy
-- [Scripts Reference](docs/scripts-reference.md) - All validation and migration scripts
-- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 
 ## License
 
