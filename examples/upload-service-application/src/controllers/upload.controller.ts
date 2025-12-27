@@ -70,6 +70,18 @@ export class UploadController extends BaseController {
     configs: {
       method: HTTP.Methods.POST,
       path: "/",
+      request: {
+        body: {
+          content: {
+            "multipart/form-data": {
+              schema: z.object({
+                file: z.any().describe("The file to upload"),
+                path: z.string().optional().describe("Optional subdirectory path"),
+              }),
+            },
+          },
+        },
+      },
       responses: {
         [HTTP.ResultCodes.RS_2.Ok]: jsonContent({
           description: "File uploaded successfully",
@@ -237,6 +249,18 @@ export class UploadController extends BaseController {
     configs: {
       method: HTTP.Methods.POST,
       path: "/batch",
+      request: {
+        body: {
+          content: {
+            "multipart/form-data": {
+              schema: z.object({
+                files: z.any().describe("Array of files to upload"),
+                path: z.string().optional().describe("Optional subdirectory path"),
+              }),
+            },
+          },
+        },
+      },
       responses: {
         [HTTP.ResultCodes.RS_2.Ok]: jsonContent({
           description: "Batch upload completed",
