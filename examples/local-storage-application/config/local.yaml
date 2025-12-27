@@ -1,0 +1,24 @@
+# Local Filesystem Configuration
+# This configuration uses the local filesystem adapter for file operations
+#
+# To switch between adapters, simply change the 'type' field:
+# - type: 'local' for local filesystem storage
+# - type: 's3' for AWS S3 storage
+#
+# No code changes required - just update the configuration!
+
+filesystem:
+  # Adapter type: 'local' for local filesystem, 's3' for AWS S3
+  # Change this value to switch between storage backends
+  type: 'local'
+
+  # Local filesystem adapter settings
+  local:
+    # Base directory for all file operations
+    # Relative paths are resolved from this directory
+    # Modify this to change where files are stored
+    basePath: './storage'
+
+    # Automatically create directories if they don't exist
+    # Set to false if you want to manage directories manually
+    createMissingDirs: true

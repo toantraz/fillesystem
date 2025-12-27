@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.venizia.ai/eslint-config.json",
+  "title": "ESLint Configuration",
+  "description": "Configuration contract for ESLint linter per Ignis standards",
+  "type": "object",
+  "properties": {
+    "extends": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "contains": {
+        "const": "@venizia/dev-configs/eslint"
+      },
+      "description": "Must extend @venizia/dev-configs/eslint"
+    },
+    "parser": {
+      "type": "string",
+      "const": "@typescript-eslint/parser",
+      "description": "TypeScript parser for ESLint"
+    },
+    "parserOptions": {
+      "type": "object",
+      "properties": {
+        "project": {
+          "type": "string",
+          "description": "Path to tsconfig.json for type-aware linting"
+        },
+        "ecmaVersion": {
+          "type": "number",
+          "default": 2022
+        },
+        "sourceType": {
+          "type": "string",
+          "const": "module"
+        }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "ESLint plugins (included via dev-configs)"
+    },
+    "rules": {
+      "type": "object",
+      "description": "Override rules from extended config"
+    },
+    "overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "rules": { "type": "object" }
+        }
+      },
+      "description": "File-specific rule overrides"
+    },
+    "ignorePatterns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Glob patterns to ignore (alternatively use .eslintignore)"
+    }
+  },
+  "required": ["extends"],
+  "anyOf": [
+    { "required": ["parser"] },
+    { "description": "Parser can be inherited from extended config" }
+  ]
+}

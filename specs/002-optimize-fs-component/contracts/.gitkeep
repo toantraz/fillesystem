@@ -1,0 +1,4 @@
+# Contracts Directory
+
+This feature is a structural refactoring and does not introduce API contracts or endpoints.
+No contracts are required for this optimization work.

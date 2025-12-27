@@ -1,0 +1,485 @@
+openapi: 3.1.0
+info:
+  title: Upload Service API
+  description: |-
+    Example upload service REST API demonstrating FilesystemComponent integration with
+    @venizia/ignis framework and Hono web framework.
+
+    **Features:**
+    - Single file upload via POST
+    - Multiple file upload via POST
+    - Server-side progress tracking via GET
+    - File type and size validation
+    - Filename sanitization (unsafe chars → underscore)
+    - Dependency injection of filesystem component
+
+    **Example Usage:**
+    ```bash
+    # Single file upload
+    curl -X POST http://localhost:3000/api/upload \
+      -F "file=@document.pdf" \
+      -D - # Headers include X-Upload-Id
+
+    # Check progress
+    curl http://localhost:3000/api/upload/progress/{upload-id}
+
+    # Multiple file upload
+    curl -X POST http://localhost:3000/api/upload/batch \
+      -F "files=@file1.jpg" \
+      -F "files=@file2.jpg"
+    ```
+  version: 1.0.0
+  contact:
+    name: Filesystem Example
+    url: https://github.com/venizia-ai/filesystem
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+
+tags:
+  - name: Upload
+    description: File upload operations
+  - name: Progress
+    description: Upload progress tracking
+
+paths:
+  /api/upload:
+    post:
+      tags:
+        - Upload
+      summary: Upload a single file
+      description: |-
+        Uploads a single file to the configured target directory.
+
+        **Response Headers:**
+        - `X-Upload-Id`: Unique identifier for the upload session (UUID v4)
+
+        **Validation:**
+        - File size must not exceed configured maxFileSize (default: 100MB)
+        - File type must be in allowedFileTypes (if configured)
+        - Target directory is created if autoCreateDirectory=true
+
+        **Progress Tracking:**
+        Use the returned `X-Upload-Id` header to poll `/api/upload/progress/{id}` for updates.
+      operationId: uploadFile
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The file to upload
+                path:
+                  type: string
+                  description: Optional subdirectory path within target directory
+                  example: "documents/reports"
+            encoding:
+              file:
+                contentType: application/octet-stream
+      responses:
+        '200':
+          description: File uploaded successfully
+          headers:
+            X-Upload-Id:
+              description: Upload session identifier for progress tracking
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResult'
+              examples:
+                success:
+                  summary: Successful upload
+                  value:
+                    success: true
+                    storagePath: "/uploads/document.pdf"
+                    errorMessage: null
+                    errorCode: null
+                    fileMetadata:
+                      filename: "document.pdf"
+                      originalFilename: "document.pdf"
+                      size: 2458624
+                      contentType: "application/pdf"
+                      uploadedAt: "2025-12-26T10:30:45.123Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '413':
+          $ref: '#/components/responses/FileTooLarge'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/upload/batch:
+    post:
+      tags:
+        - Upload
+      summary: Upload multiple files
+      description: |-
+        Uploads multiple files to the configured target directory.
+
+        **Behavior:**
+        - All files are processed independently
+        - Partial success is possible (some files may fail)
+        - Response includes individual results for each file
+        - Failed uploads don't affect successful ones
+        - Progress tracking for batch uploads uses the first file's uploadId
+      operationId: uploadFiles
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Files to upload (use same field name multiple times)
+                path:
+                  type: string
+                  description: Optional subdirectory path within target directory
+                  example: "photos/vacation"
+            encoding:
+              files:
+                contentType: application/octet-stream
+      responses:
+        '200':
+          description: Batch upload completed (may have partial failures)
+          headers:
+            X-Upload-Id:
+              description: Upload session identifier for first file's progress
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultiUploadResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/upload/progress/{uploadId}:
+    get:
+      tags:
+        - Progress
+      summary: Get upload progress
+      description: |-
+        Returns the current progress of an active upload session.
+
+        **Polling Strategy:**
+        - Poll every 500ms for updates
+        - Stop polling when status is `completed` or `failed`
+        - Session is deleted after completion (short TTL)
+
+        **Progress Calculation:**
+        - percentage: Round((bytesReceived / totalBytes) * 100)
+        - Status transitions: pending → in_progress → completed/failed
+      operationId: getUploadProgress
+      parameters:
+        - name: uploadId
+          in: path
+          required: true
+          description: Upload session identifier (from X-Upload-Id header)
+          schema:
+            type: string
+            format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+      responses:
+        '200':
+          description: Progress information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressResult'
+              examples:
+                inProgress:
+                  summary: Upload in progress
+                  value:
+                    uploadId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    percentage: 45
+                    bytesReceived: 4500000
+                    totalBytes: 10000000
+                    status: "in_progress"
+                completed:
+                  summary: Upload completed
+                  value:
+                    uploadId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    percentage: 100
+                    bytesReceived: 10000000
+                    totalBytes: 10000000
+                    status: "completed"
+                failed:
+                  summary: Upload failed
+                  value:
+                    uploadId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    percentage: 0
+                    bytesReceived: 0
+                    totalBytes: 10000000
+                    status: "failed"
+        '404':
+          description: Upload session not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                success: false
+                errorMessage: "Upload session not found"
+                errorCode: "SESSION_NOT_FOUND"
+                context:
+                  uploadId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+
+components:
+  schemas:
+    UploadResult:
+      type: object
+      description: Result of a single file upload operation
+      properties:
+        success:
+          type: boolean
+          description: Whether the upload succeeded
+        storagePath:
+          type: string
+          nullable: true
+          description: Full path where file was stored (null if failed)
+          example: "/uploads/document.pdf"
+        errorMessage:
+          type: string
+          nullable: true
+          description: Human-readable error message (null if success)
+          example: null
+        errorCode:
+          type: string
+          nullable: true
+          description: Machine-readable error code (null if success)
+          example: null
+          enum:
+            - VALIDATION_ERROR
+            - FILE_TOO_LARGE
+            - INVALID_FILE_TYPE
+            - UPLOAD_FAILED
+            - DIRECTORY_NOT_FOUND
+            - FILE_WRITE_ERROR
+            - SESSION_NOT_FOUND
+        fileMetadata:
+          $ref: '#/components/schemas/FileMetadata'
+      required:
+        - success
+        - storagePath
+        - errorMessage
+        - errorCode
+        - fileMetadata
+
+    FileMetadata:
+      type: object
+      description: Information about the uploaded file
+      properties:
+        filename:
+          type: string
+          description: Sanitized filename as stored
+          example: "my_file_.pdf"
+        originalFilename:
+          type: string
+          description: Original filename from client (before sanitization)
+          example: "my@file#.pdf"
+        size:
+          type: integer
+          format: int64
+          description: File size in bytes
+          example: 2458624
+        contentType:
+          type: string
+          description: MIME type of the file
+          example: "application/pdf"
+        uploadedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when upload completed
+          example: "2025-12-26T10:30:45.123Z"
+      required:
+        - filename
+        - originalFilename
+        - size
+        - contentType
+        - uploadedAt
+
+    ProgressResult:
+      type: object
+      description: Upload progress information
+      properties:
+        uploadId:
+          type: string
+          format: uuid
+          description: Upload session identifier
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Upload progress percentage (0-100)
+          example: 45
+        bytesReceived:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Number of bytes received so far
+          example: 4500000
+        totalBytes:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Total file size in bytes
+          example: 10000000
+        status:
+          type: string
+          description: Current status of the upload
+          enum:
+            - pending
+            - in_progress
+            - completed
+            - failed
+          example: "in_progress"
+      required:
+        - uploadId
+        - percentage
+        - bytesReceived
+        - totalBytes
+        - status
+
+    MultiUploadResult:
+      type: object
+      description: Result of multiple file upload operation
+      properties:
+        totalFiles:
+          type: integer
+          description: Total number of files uploaded
+          example: 5
+        successfulUploads:
+          type: integer
+          description: Number of files successfully stored
+          example: 4
+        failedUploads:
+          type: integer
+          description: Number of files that failed
+          example: 1
+        results:
+          type: array
+          description: Individual result for each file
+          items:
+            $ref: '#/components/schemas/UploadResult'
+      required:
+        - totalFiles
+        - successfulUploads
+        - failedUploads
+        - results
+
+    Error:
+      type: object
+      description: Error response
+      properties:
+        success:
+          type: boolean
+          example: false
+        errorMessage:
+          type: string
+          description: Human-readable error message
+          example: "File size exceeds 104857600 bytes"
+        errorCode:
+          type: string
+          description: Machine-readable error code
+          example: "FILE_TOO_LARGE"
+          enum:
+            - VALIDATION_ERROR
+            - FILE_TOO_LARGE
+            - INVALID_FILE_TYPE
+            - UPLOAD_FAILED
+            - DIRECTORY_NOT_FOUND
+            - FILE_WRITE_ERROR
+            - SESSION_NOT_FOUND
+        context:
+          type: object
+          description: Additional error context
+          additionalProperties: true
+          example:
+            maxSize: 104857600
+            actualSize: 157286400
+      required:
+        - success
+        - errorMessage
+        - errorCode
+
+  responses:
+    BadRequest:
+      description: Bad request - validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            errorMessage: "Invalid form data"
+            errorCode: "VALIDATION_ERROR"
+            context:
+              field: "file"
+              issue: "required"
+
+    FileTooLarge:
+      description: File size exceeds configured maximum
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            errorMessage: "File size exceeds 104857600 bytes"
+            errorCode: "FILE_TOO_LARGE"
+            context:
+              maxSize: 104857600
+              actualSize: 157286400
+
+    UnsupportedMediaType:
+      description: File type not allowed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            errorMessage: "File type application/x-executable not allowed"
+            errorCode: "INVALID_FILE_TYPE"
+            context:
+              fileType: "application/x-executable"
+              allowedTypes:
+                - "image/jpeg"
+                - "image/png"
+                - "application/pdf"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            errorMessage: "Failed to write file to storage"
+            errorCode: "FILE_WRITE_ERROR"
+            context:
+              path: "/uploads/document.pdf"
+              reason: "EACCES: permission denied"

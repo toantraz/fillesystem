@@ -1,0 +1,55 @@
+services:
+  minio:
+    # MinIO is a high-performance object storage server that is API compatible with AWS S3
+    # This configuration sets up a local MinIO instance for S3 filesystem testing
+    image: minio/minio:latest
+
+    # Use custom entrypoint wrapper that runs init-buckets.sh before starting MinIO
+    entrypoint: ["/docker-entrypoint-wrapper.sh"]
+
+    # MinIO server command (passed to the wrapped entrypoint)
+    command: ["server", "/data", "--console-address", ":9001"]
+
+    # Container name for easy reference
+    container_name: venizia-minio
+
+    # Environment variables for MinIO credentials
+    # MINIO_ROOT_USER and MINIO_ROOT_PASSWORD can be overridden via .env file
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MINIO_ENDPOINT=http://localhost:9000
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-test-bucket}
+
+    # Port mappings
+    # 9000: S3 API endpoint (used by the application)
+    # 9001: MinIO Web Console (for manual verification and debugging)
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+
+    # Named volume for persistent data storage
+    # Data persists even when container is stopped/removed (unless volume is deleted)
+    volumes:
+      - minio_data:/data
+      # Mount the bucket initialization script into the container
+      - ./init-buckets.sh:/init-buckets.sh:ro
+      # Mount the custom entrypoint wrapper script into the container
+      - ./docker-entrypoint-wrapper.sh:/docker-entrypoint-wrapper.sh:ro
+
+    # Health check to ensure MinIO is ready before running dependent services
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    # Restart policy: restart unless manually stopped
+    restart: unless-stopped
+
+# Named volumes for data persistence
+volumes:
+  minio_data:
+    driver: local
+

@@ -1,0 +1,37 @@
+# AWS S3 Configuration
+# This configuration uses the AWS S3 adapter for file operations
+#
+# To switch between adapters, simply change the 'type' field:
+# - type: 'local' for local filesystem storage
+# - type: 's3' for AWS S3 storage
+#
+# No code changes required - just update the configuration!
+
+filesystem:
+  # Adapter type: 's3' for AWS S3
+  # Change this value to switch between storage backends
+  type: 's3'
+
+  # S3 adapter settings
+  s3:
+    # S3 bucket name (required)
+    # Replace with your actual S3 bucket name
+    bucket: 'my-bucket'
+
+    # AWS region (required)
+    # Replace with your actual AWS region
+    region: 'us-east-1'
+
+    # Optional key prefix (acts as a virtual directory)
+    # All files will be stored under this prefix in the bucket
+    prefix: 'example/'
+
+# Note: S3 credentials should be set via environment variables:
+#   AWS_ACCESS_KEY_ID=your_access_key
+#   AWS_SECRET_ACCESS_KEY=your_secret_key
+#   AWS_REGION=us-east-1 (optional if region is set in config)
+#
+# Example:
+#   export AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+#   export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+#   export AWS_REGION=us-east-1

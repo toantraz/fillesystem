@@ -1,0 +1,39 @@
+{
+  "name": "@ignis/filesystem-s3-minio-example",
+  "version": "1.0.0",
+  "description": "S3 MinIO example application demonstrating FilesystemComponent integration with Ignis framework",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "dev": "tsx src/index.ts",
+    "clean": "rm -rf dist",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "filesystem",
+    "s3",
+    "minio",
+    "ignis",
+    "example",
+    "demo"
+  ],
+  "author": "Venizia",
+  "license": "MIT",
+  "dependencies": {
+    "@ignis/filesystem": "file:../..",
+    "@venizia/ignis": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.8.3",
+    "jose": "^6.1.3",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

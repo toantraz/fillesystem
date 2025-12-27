@@ -1,0 +1,9 @@
+{
+  "filesystem": {
+    "type": "local",
+    "local": {
+      "basePath": "./storage",
+      "createMissingDirs": true
+    }
+  }
+}

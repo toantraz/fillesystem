@@ -1,0 +1,80 @@
+{
+  "name": "@ignis/filesystem",
+  "version": "1.0.0",
+  "description": "Transparent filesystem component supporting local and S3 storage with Node.js fs compatibility",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "prettier": "prettier --check \"**/*.{ts,js,json,md}\"",
+    "prettier:fix": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "type-check": "tsc --noEmit",
+    "validate": "npm run type-check && npm run lint && npm run prettier",
+    "validate:fix": "npm run prettier:fix && npm run lint:fix",
+    "validate:structure": "bash scripts/check-structure.sh",
+    "validate:naming": "bash scripts/check-naming.sh",
+    "validate:interfaces": "bash scripts/check-interfaces.sh",
+    "validate:types": "bash scripts/check-types.sh",
+    "validate:constants": "bash scripts/check-constants.sh",
+    "migrate:suppress": "bash scripts/migrate-suppress.sh",
+    "migrate:track": "bash scripts/track-violations.sh",
+    "fix:file": "bash scripts/fix-file.sh",
+    "validate:all": "bash scripts/validate-all.sh",
+    "validate:logging": "bash scripts/check-logging.sh",
+    "validate:errors": "bash scripts/check-errors.sh",
+    "format": "prettier --write src/**/*.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "filesystem",
+    "s3",
+    "local",
+    "storage",
+    "node-fs"
+  ],
+  "author": "Venizia",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.957.0",
+    "@hono/zod-openapi": "^1.2.0",
+    "commander": "^11.0.0",
+    "inquirer": "^9.0.0",
+    "zod": "^4.2.1"
+  },
+  "peerDependencies": {
+    "@venizia/ignis": "^0.0.1"
+  },
+  "peerDependenciesMeta": {
+    "@venizia/ignis": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@venizia/dev-configs": "^0.0.3",
+    "@venizia/ignis": "^0.0.1",
+    "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.8.3",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "jose": "^6.1.3",
+    "pg": "^8.16.3",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

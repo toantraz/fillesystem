@@ -1,0 +1,111 @@
+# Package Scripts Contract
+
+**Feature**: 001-code-style-standards
+**Contract Type**: npm/bun Scripts
+
+This document defines the standard npm scripts for linting, formatting, and validation.
+
+## Required Scripts
+
+These scripts must be added to `package.json`:
+
+```json
+{
+  "scripts": {
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "prettier": "prettier --check \"**/*.{ts,js,json,md}\"",
+    "prettier:fix": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "type-check": "tsc --noEmit",
+    "validate": "npm run type-check && npm run lint && npm run prettier",
+    "validate:fix": "npm run prettier:fix && npm run lint:fix"
+  }
+}
+```
+
+## Script Descriptions
+
+| Script | Purpose | Exit Codes |
+|--------|---------|------------|
+| `lint` | Check code quality with ESLint | 0 = pass, 1 = failures found |
+| `lint:fix` | Auto-fix ESLint issues | 0 = pass, 1 = unfixable issues |
+| `prettier` | Check formatting | 0 = pass, 1 = formatting needed |
+| `prettier:fix` | Apply formatting | 0 = success |
+| `type-check` | Type checking only | 0 = pass, 2 = type errors |
+| `validate` | Run all checks | Fail-fast on first error |
+| `validate:fix` | Fix all auto-fixable issues | 0 = success |
+
+## Ignore Files
+
+### .prettierignore
+
+```
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Generated files
+*.generated.ts
+
+# Lock files
+package-lock.json
+yarn.lock
+bun.lockb
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+```
+
+### .eslintignore
+
+```
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Generated files
+*.generated.ts
+
+# Config files (may not follow project standards)
+.eslintrc.json
+.prettierrc.js
+```
+
+## Pre-commit Hook (Optional)
+
+For projects using husky or similar:
+
+```bash
+#!/bin/bash
+# .husky/pre-commit
+
+npm run validate || {
+  echo "❌ Validation failed. Run 'npm run validate:fix' to auto-fix."
+  exit 1
+}
+```
+
+## CI/CD Integration
+
+Example GitHub Actions step:
+
+```yaml
+- name: Validate code style
+  run: |
+    npm run validate
+  env:
+    CI: true
+```

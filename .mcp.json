@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ignis-docs": {
+      "command": "bun",
+      "args": ["x", "-p", "@venizia/ignis-docs@next", "ignis-docs-mcp"]
+    }
+  }
+}
+

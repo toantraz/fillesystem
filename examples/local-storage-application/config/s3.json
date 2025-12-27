@@ -1,0 +1,10 @@
+{
+  "filesystem": {
+    "type": "s3",
+    "s3": {
+      "bucket": "my-bucket",
+      "region": "us-east-1",
+      "prefix": "example/"
+    }
+  }
+}

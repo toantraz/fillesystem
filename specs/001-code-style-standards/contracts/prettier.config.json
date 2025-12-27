@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.venizia.ai/prettier-config.json",
+  "title": "Prettier Configuration",
+  "description": "Configuration contract for Prettier code formatter per Ignis standards",
+  "type": "object",
+  "properties": {
+    "bracketSpacing": {
+      "type": "boolean",
+      "const": true,
+      "description": "Print spaces between brackets in object literals"
+    },
+    "singleQuote": {
+      "type": "boolean",
+      "const": false,
+      "description": "Use double quotes instead of single quotes"
+    },
+    "printWidth": {
+      "type": "integer",
+      "const": 100,
+      "description": "Maximum line width before wrapping"
+    },
+    "trailingComma": {
+      "type": "string",
+      "const": "all",
+      "description": "Add trailing commas where valid"
+    },
+    "arrowParens": {
+      "type": "string",
+      "const": "avoid",
+      "description": "Omit parentheses around single-parameter arrow functions"
+    },
+    "semi": {
+      "type": "boolean",
+      "const": true,
+      "description": "Require semicolons at end of statements"
+    },
+    "endOfLine": {
+      "type": "string",
+      "enum": ["lf", "crlf", "auto"],
+      "description": "Line ending style (auto-detect by default)"
+    },
+    "tabWidth": {
+      "type": "integer",
+      "default": 2,
+      "description": "Number of spaces per indentation level"
+    },
+    "useTabs": {
+      "type": "boolean",
+      "const": false,
+      "description": "Use spaces instead of tabs"
+    }
+  },
+  "required": [
+    "bracketSpacing",
+    "singleQuote",
+    "printWidth",
+    "trailingComma",
+    "arrowParens",
+    "semi"
+  ],
+  "additionalProperties": false
+}
